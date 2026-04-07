@@ -12,12 +12,27 @@ camera:
   width: 1920
   height: 1080
   fps: 30
+  # Exposure control for varying light at 59°N.
+  # Locking white balance + slight underexposure reduces glare over water.
+  exposure:
+    auto_exposure: 3            # 3 = auto mode
+    exposure_value: -6          # Slight underexposure to reduce glare blowout
+    white_balance_auto: false   # Lock WB to prevent flicker at dusk
+    red_balance: 1400
+    blue_balance: 1600
 
 inference:
   model_path: "data/models/salmon_yolov8n_edgetpu.tflite"
   conf_threshold: 0.45
   line_y: 540           # Y pixel of virtual counting line (0 = top)
   tracker: "bytetrack.yaml"
+  # Adaptive confidence: lower threshold at dusk, higher at midday.
+  # Set to null to disable (use fixed conf_threshold instead).
+  adaptive_conf:
+    bright_threshold: 0.50    # Conf when frame brightness > bright_level
+    dim_threshold: 0.35       # Conf when frame brightness < dim_level
+    bright_level: 140         # Brightness (0-255) above which bright_threshold kicks in
+    dim_level: 60             # Brightness (0-255) below which dim_threshold kicks in
 
 logging:
   db_path: "data/counts/fishcount.db"

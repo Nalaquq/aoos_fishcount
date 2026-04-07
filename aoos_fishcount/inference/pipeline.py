@@ -10,6 +10,7 @@ import cv2
 
 from aoos_fishcount.inference.counter import LineCounter
 from aoos_fishcount.inference.model import SalmonDetector
+from aoos_fishcount.power.monitor import read_cpu_temp, check_undervoltage, check_disk_space
 from aoos_fishcount.sensors.camera import CameraCapture
 from aoos_fishcount.sensors.environment import EnvironmentSensor
 from aoos_fishcount.utils.database import Database
@@ -34,8 +35,14 @@ class Pipeline:
         cam = cfg["camera"]
         log_cfg = cfg["logging"]
 
-        self.camera   = CameraCapture(cam["device_index"], cam["width"], cam["height"], cam["fps"])
-        self.detector = SalmonDetector(inf["model_path"], inf["conf_threshold"])
+        self.camera   = CameraCapture(
+            cam["device_index"], cam["width"], cam["height"], cam["fps"],
+            exposure=cam.get("exposure"),
+        )
+        self.detector = SalmonDetector(
+            inf["model_path"], inf["conf_threshold"],
+            adaptive_conf=inf.get("adaptive_conf"),
+        )
         self.counter  = LineCounter(line_y=inf["line_y"])
         self.db       = Database(log_cfg["db_path"])
         self.env      = EnvironmentSensor()
@@ -79,13 +86,16 @@ class Pipeline:
         for box, tid, cls, conf in zip(boxes, ids, clss, confs):
             cx = int((box[0] + box[2]) / 2)
             cy = int((box[1] + box[3]) / 2)
-            crossed = self.counter.update(tid, cx, cy)
-            if crossed:
+            direction = self.counter.update(tid, cx, cy)
+            if direction:
                 species = self.detector.class_names.get(cls, "unknown")
-                self.db.log_count(species, float(conf), int(tid))
+                self.db.log_count(species, float(conf), int(tid), direction)
                 log.info(
-                    "COUNT #%d — species=%s conf=%.2f track_id=%d",
-                    self.counter.total, species, conf, tid,
+                    "%s #%d (net %d) — species=%s conf=%.2f track_id=%d",
+                    direction.upper(),
+                    self.counter.upstream if direction == "upstream" else self.counter.downstream,
+                    self.counter.net_upstream(),
+                    species, conf, tid,
                 )
 
     def _maybe_log_health(self) -> None:
@@ -94,13 +104,21 @@ class Pipeline:
             return
         self._last_health = now
         reading = self.env.read()
+        cpu_temp = read_cpu_temp()
         if reading:
-            self.db.log_health(reading["temp_c"], reading["humidity_pct"])
+            self.db.log_health(reading["temp_c"], reading["humidity_pct"], cpu_temp)
             if reading["humidity_pct"] and reading["humidity_pct"] > 70:
                 log.warning(
                     "Interior humidity HIGH: %.0f%% — check desiccant",
                     reading["humidity_pct"],
                 )
+        if cpu_temp and cpu_temp > 80:
+            log.warning("CPU temperature HIGH: %.1f°C — check Coral airflow", cpu_temp)
+        if check_undervoltage():
+            log.warning("RPi undervoltage detected — check 12V→5V buck and cable length")
+        free_gb, disk_ok = check_disk_space("/")
+        if not disk_ok:
+            log.warning("Disk space LOW: %.1f GB free — risk of data loss", free_gb)
 
     def _maybe_push_summary(self) -> None:
         now = time.time()

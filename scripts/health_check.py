@@ -54,14 +54,23 @@ def main():
     except Exception:
         results.append(check("BME280 (I2C)", False, "i2cdetect not found"))
 
-    # Tailscale
+    # Network connectivity
     try:
-        ts = subprocess.run(
-            ["tailscale", "status"], capture_output=True, text=True, timeout=5
-        )
-        results.append(check("Tailscale", ts.returncode == 0))
-    except Exception:
-        results.append(check("Tailscale", False, "not installed"))
+        from aoos_fishcount.sensors.network import check_connectivity, check_tailscale
+        results.append(check("Internet (ping)", check_connectivity()))
+        ts_status = check_tailscale()
+        results.append(check(
+            "Tailscale", ts_status["running"],
+            f"IP: {ts_status['ip']}" if ts_status["ip"] else "",
+        ))
+    except ImportError:
+        try:
+            ts = subprocess.run(
+                ["tailscale", "status"], capture_output=True, text=True, timeout=5
+            )
+            results.append(check("Tailscale", ts.returncode == 0))
+        except Exception:
+            results.append(check("Tailscale", False, "not installed"))
 
     # Disk space (warn if < 2GB free on /)
     stat = Path("/").stat()

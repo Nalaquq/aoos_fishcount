@@ -13,14 +13,29 @@ camera:
   width: 1920
   height: 1080
   fps: 30
+  # Exposure control — tune for your site's light conditions.
+  # See build guide Section 7.4 for rationale.
+  exposure:
+    auto_exposure: 3                       # 3 = auto mode
+    exposure_value: -6                     # Slight underexposure to reduce glare
+    white_balance_auto: false              # Lock WB to prevent flicker at dusk
+    red_balance: 1400
+    blue_balance: 1600
 
 inference:
   model_path: "data/models/salmon_yolov8n_edgetpu.tflite"
   conf_threshold: 0.45                     # Tune after validation: raise to reduce FP,
                                            # lower to catch more fish
-  line_y: 540                              # Set on-site from a captured still frame.
+  line_y: 540                              # Set on-site: python scripts/calibrate_line.py
                                            # Y=0 is top of frame, Y=1079 is bottom.
   tracker: "bytetrack.yaml"
+  # Adaptive confidence — automatically adjusts threshold by ambient light.
+  # Set to null to use fixed conf_threshold for all conditions.
+  adaptive_conf:
+    bright_threshold: 0.50                 # Midday: raise to reduce FP from glare/debris
+    dim_threshold: 0.35                    # Dusk/dawn: lower to catch more fish
+    bright_level: 140
+    dim_level: 60
 
 logging:
   db_path: "data/counts/fishcount.db"

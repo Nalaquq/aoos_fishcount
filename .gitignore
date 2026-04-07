@@ -69,3 +69,7 @@ Thumbs.db
 # Docs build
 site/
 docs/_build/
+
+# Build guide — track PDFs, spreadsheets, and parts lists
+# (these are physical build documentation, not code artifacts)
+!build_guide/

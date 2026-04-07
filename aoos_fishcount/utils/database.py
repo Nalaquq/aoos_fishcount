@@ -65,14 +65,26 @@ class Database:
         )
         self._conn.commit()
 
-    def hourly_summary(self) -> dict[str, int]:
-        """Return per-species counts for the past hour."""
+    def hourly_summary(self) -> dict:
+        """Return per-species counts and latest health for the past hour."""
         rows = self._conn.execute(
             "SELECT species, COUNT(*) FROM counts "
             "WHERE timestamp > datetime('now', '-1 hour') "
             "GROUP BY species"
         ).fetchall()
-        return {row[0]: row[1] for row in rows}
+        counts = {row[0]: row[1] for row in rows}
+
+        health = self._conn.execute(
+            "SELECT temp_c, humidity_pct, cpu_temp_c FROM health "
+            "ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+
+        return {
+            "counts": counts,
+            "interior_temp_c": health[0] if health else None,
+            "interior_rh_pct": health[1] if health else None,
+            "cpu_temp_c": health[2] if health else None,
+        }
 
     def close(self) -> None:
         self._conn.close()

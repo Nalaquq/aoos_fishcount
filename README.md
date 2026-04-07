@@ -2,9 +2,8 @@
 
 **Field-deployable salmon escapement counting system for Kuskokwim Basin tributaries.**
 
-Developed by [Nalaquq, LLC](https://nalaquq.com) (Quinhagak, Alaska) in support of the
-[KRITFC Camera-Based Escapement Monitoring Program](https://www.kuskosalmon.org/alternative-assessment-studies)
-and funded under an Arctic-Yukon-Kuskokwim Sustainable Salmon Initiative grant (AOOS).
+Developed by [Nalaquq, LLC](https://nalaquq.com) (Quinhagak, Alaska) 
+and funded under an Alaska Ocean Observation System (AOOS) grant.
 
 ---
 
@@ -89,17 +88,17 @@ cp config/deployment_template.yaml config/my_site.yaml
 ### Running the Pipeline
 
 ```bash
-# Verify camera and sensors are detected
+# Verify camera, sensors, Coral, network, and disk space
 python scripts/health_check.py
 
 # Focus check at 12-foot working distance
 python scripts/focus_check.py
 
+# Capture a frame with counting line overlay for on-site calibration
+python scripts/calibrate_line.py --line-y 540 --output site_frame.jpg
+
 # Start the counting pipeline
 python -m aoos_fishcount --config config/my_site.yaml
-
-# Or run individual components
-python -m aoos_fishcount.inference.pipeline --config config/my_site.yaml
 ```
 
 ### Running as Systemd Services (Field Deployment)
@@ -120,19 +119,25 @@ aoos_fishcount/
 │   ├── inference/           # Detection, tracking, counting
 │   │   ├── pipeline.py      # Main inference loop
 │   │   ├── model.py         # YOLOv8 / Coral TPU model wrapper
+│   │   │                    #   + adaptive confidence by brightness
 │   │   ├── tracker.py       # ByteTrack multi-object tracker
-│   │   └── counter.py       # Virtual line crossing counter
+│   │   └── counter.py       # Virtual line crossing counter (bidirectional)
 │   ├── sensors/             # Hardware interfaces
-│   │   ├── camera.py        # Camera capture (libcamera / OpenCV)
-│   │   └── environment.py   # BME280 temp/humidity sensor
+│   │   ├── camera.py        # Camera capture + exposure control
+│   │   ├── environment.py   # BME280 temp/humidity sensor
+│   │   └── network.py       # Starlink / Tailscale connectivity monitor
 │   ├── power/               # Power monitoring
-│   │   └── monitor.py       # Battery / system health
+│   │   └── monitor.py       # CPU temp, undervoltage, disk space
 │   └── utils/               # Shared utilities
 │       ├── config.py        # YAML config loader and validator
 │       ├── database.py      # SQLite count and health logging
 │       ├── logging.py       # Structured logging setup
 │       └── push.py          # Starlink / remote data push
-├── docs/                    # Documentation
+├── build_guide/             # Physical build documentation
+│   │                        #   PDFs, parts lists, wiring diagrams
+│   ├── Salmon CV System Build Guide.pdf
+│   └── ...                  # Spreadsheets, vendor quotes, etc.
+├── docs/                    # Software & field documentation
 │   ├── hardware/            # Physical assembly guides
 │   ├── software/            # Software setup guides
 │   └── field/               # Field deployment protocols
@@ -144,6 +149,8 @@ aoos_fishcount/
 │   ├── deploy.sh            # Install systemd services
 │   ├── install_coral.sh     # Coral Edge TPU runtime installer
 │   ├── focus_check.py       # Real-time lens sharpness monitor
+│   ├── calibrate_line.py    # Capture frame with LINE_Y overlay
+│   ├── validate_counts.py   # Compare CV vs observer counts
 │   ├── export_model.py      # Export YOLOv8 to Edge TPU TFLite
 │   ├── push_summary.py      # Manual hourly summary push
 │   └── health_check.py      # Pre-deployment system check
@@ -181,11 +188,22 @@ camera:
   width: 1920
   height: 1080
   fps: 30
+  exposure:                    # Glare reduction for oblique water views
+    auto_exposure: 3           # 3 = auto mode
+    exposure_value: -6         # Slight underexposure reduces glare blowout
+    white_balance_auto: false  # Lock WB to prevent flicker at dusk
+    red_balance: 1400
+    blue_balance: 1600
 
 inference:
   model_path: "data/models/salmon_yolov8n_edgetpu.tflite"
   conf_threshold: 0.45
-  line_y: 540          # Virtual counting line, Y pixels from top
+  line_y: 540                  # Virtual counting line, Y pixels from top
+  adaptive_conf:               # Auto-adjust threshold by ambient light
+    bright_threshold: 0.50     # Midday — higher to reduce FP from glare
+    dim_threshold: 0.35        # Dusk/dawn — lower to catch more fish
+    bright_level: 140
+    dim_level: 60
 
 logging:
   db_path: "data/counts/fishcount.db"
@@ -209,13 +227,39 @@ python scripts/export_model.py --weights salmon_yolov8n.pt --output data/models/
 ## Validation
 
 Detection efficiency must be established through concurrent observer counts before
-deploying unattended. See [docs/field/validation_protocol.md](docs/field/validation_protocol.md).
+deploying unattended. See [docs/field/validation_protocol.md](docs/field/validation_protocol.md)
+and the [Salmon CV System Build Guide](build_guide/) Section 10.
+
+After collecting observer tallies in CSV format, run the validation script:
+
+```bash
+python scripts/validate_counts.py --db data/counts/fishcount.db --observer observer_tallies.csv
+```
+
+This reports detection efficiency, species classification accuracy, false positive rate,
+and system uptime, along with the scientifically defensible reporting format required by
+KRITFC/ADF&G for incorporation into escapement models.
 
 Target metrics:
 - Detection efficiency: > 0.80
 - Species classification accuracy: > 0.85 (sockeye, coho)
 - False positive rate: < 0.05
 - System uptime: > 0.95
+
+---
+
+## Build Guide
+
+The `build_guide/` directory contains the physical build documentation for the complete
+field-deployable system, including:
+
+- **Salmon CV System Build Guide** (PDF) — 33-page document covering system architecture,
+  complete parts list (~$1,025 BOM), 6-phase assembly, software stack setup, focus
+  workflow, field deployment protocol, and troubleshooting.
+- Parts list spreadsheets, wiring diagrams, and vendor reference documents.
+
+This is the authoritative reference for the hardware side of the project. The software in
+this repository implements the pipeline described in the guide's Phase 4 (Software Stack).
 
 ---
 

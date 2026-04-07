@@ -1,8 +1,9 @@
-"""System power and CPU health monitoring."""
+"""System power, CPU health, and disk space monitoring."""
 
 from __future__ import annotations
 
 import logging
+import shutil
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -42,3 +43,18 @@ def check_undervoltage() -> bool:
         return bool(throttled & 0x1)  # bit 0 = undervoltage detected
     except Exception:
         return False
+
+
+def check_disk_space(path: str = "/", min_gb: float = 2.0) -> tuple[float, bool]:
+    """Check free disk space on the filesystem containing *path*.
+
+    Args:
+        path: Any path on the target filesystem (default: root).
+        min_gb: Minimum acceptable free space in GB.
+
+    Returns:
+        Tuple of (free_gb, is_ok).
+    """
+    usage = shutil.disk_usage(path)
+    free_gb = round(usage.free / 1e9, 2)
+    return free_gb, free_gb >= min_gb
