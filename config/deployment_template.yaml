@@ -1,0 +1,33 @@
+# aoos_fishcount — Deployment Site Configuration Template
+# Copy to config/my_site.yaml and fill in site-specific values.
+# Do NOT commit site configs (they contain coordinates and are .gitignored).
+
+site:
+  name: "Kwethluk River — Mile 12"        # Human-readable site identifier
+  latitude: 60.123                         # Decimal degrees N
+  longitude: -161.456                      # Decimal degrees W
+  river_width_m: 3.2                       # Approximate river width at counting zone
+
+camera:
+  device_index: 0                          # /dev/video0 (CSI extender USB camera)
+  width: 1920
+  height: 1080
+  fps: 30
+
+inference:
+  model_path: "data/models/salmon_yolov8n_edgetpu.tflite"
+  conf_threshold: 0.45                     # Tune after validation: raise to reduce FP,
+                                           # lower to catch more fish
+  line_y: 540                              # Set on-site from a captured still frame.
+                                           # Y=0 is top of frame, Y=1079 is bottom.
+  tracker: "bytetrack.yaml"
+
+logging:
+  db_path: "data/counts/fishcount.db"
+  log_dir: "data/logs"
+  health_interval_minutes: 5              # Log BME280 readings every N minutes
+  push_interval_minutes: 60              # Push count summary via Starlink every N min
+
+push:
+  endpoint: null                          # e.g. "https://dashboard.nalaquq.com/counts"
+  dry_run: false

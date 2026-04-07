@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "aoos_fishcount"
+version = "0.1.0"
+description = "Field-deployable salmon escapement counting system for Kuskokwim Basin tributaries"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Nalaquq, LLC", email = "info@nalaquq.com" }]
+requires-python = ">=3.11"
+keywords = ["salmon", "computer-vision", "escapement", "alaska", "yolov8", "coral-tpu"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "ultralytics>=8.0",
+    "opencv-python-headless>=4.8",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "adafruit-circuitpython-bme280>=2.6",
+    "RPi.GPIO>=0.7; platform_machine=='aarch64'",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.11",
+    "ruff>=0.1",
+    "black>=23.0",
+    "mypy>=1.5",
+    "pre-commit>=3.4",
+]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
+]
+
+[project.scripts]
+aoos-fishcount = "aoos_fishcount.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/Nalaquq/aoos_fishcount"
+Issues = "https://github.com/Nalaquq/aoos_fishcount/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aoos_fishcount*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=aoos_fishcount --cov-report=term-missing"
+markers = [
+    "hardware: marks tests that require physical hardware (deselect with '-m not hardware')",
+    "slow: marks tests that are slow",
+]
+
+[tool.coverage.run]
+source = ["aoos_fishcount"]
+omit = ["tests/*", "scripts/*"]

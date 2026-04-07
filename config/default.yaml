@@ -1,0 +1,30 @@
+# aoos_fishcount — Default Configuration
+# All values here are overridden by your site-specific config.
+
+site:
+  name: "Default Site"
+  latitude: null
+  longitude: null
+  river_width_m: null
+
+camera:
+  device_index: 0
+  width: 1920
+  height: 1080
+  fps: 30
+
+inference:
+  model_path: "data/models/salmon_yolov8n_edgetpu.tflite"
+  conf_threshold: 0.45
+  line_y: 540           # Y pixel of virtual counting line (0 = top)
+  tracker: "bytetrack.yaml"
+
+logging:
+  db_path: "data/counts/fishcount.db"
+  log_dir: "data/logs"
+  health_interval_minutes: 5
+  push_interval_minutes: 60
+
+push:
+  endpoint: null        # HTTP POST endpoint, or null to disable remote push
+  dry_run: false

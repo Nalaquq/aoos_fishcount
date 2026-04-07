@@ -1,0 +1,10 @@
+-r requirements.txt
+pytest>=7.4
+pytest-cov>=4.1
+pytest-mock>=3.11
+ruff>=0.1
+black>=23.0
+mypy>=1.5
+pre-commit>=3.4
+mkdocs>=1.5
+mkdocs-material>=9.0
