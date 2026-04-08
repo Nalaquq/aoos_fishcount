@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Labeling tool** — new `aoos_fishcount/labeling/` subpackage providing a
+  Flask-based web UI for bounding box annotation of salmon species in images.
+  Generates YOLO-format training data (`.txt` label files, `classes.txt`,
+  `dataset.yaml`). Supports five species classes: king, red, silver, chum, pink.
+  Features include:
+  - Canvas-based bounding box drawing with resize handles and drag-to-move
+  - Species selection via color-coded buttons or keyboard shortcuts (`1`-`5`)
+  - Auto-save on navigation, persistent progress tracking across sessions
+  - YOLO export with normalized coordinates
+  - Keyboard-driven workflow (arrow keys, Enter, Ctrl+S, Delete, Escape)
+  - Installable as optional dependency: `pip install -e ".[labeling]"`
+  - Console entry point: `aoos-label --input <dir> --output <dir>`
+  - Can be bundled as standalone `.exe` via PyInstaller
+- Labeling tool documentation at `docs/software/labeling.md`
 - Initial project scaffold
 - YOLOv8 + ByteTrack single-camera inference pipeline
 - BME280 interior environment monitoring

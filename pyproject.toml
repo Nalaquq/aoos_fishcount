@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "aoos_fishcount"
@@ -43,9 +43,13 @@ docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
 ]
+labeling = [
+    "flask>=3.0",
+]
 
 [project.scripts]
 aoos-fishcount = "aoos_fishcount.__main__:main"
+aoos-label = "aoos_fishcount.labeling.app:main"
 
 [project.urls]
 Repository = "https://github.com/Nalaquq/aoos_fishcount"

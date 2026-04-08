@@ -157,11 +157,48 @@ aoos_fishcount/
 ├── config/                  # Configuration files
 │   ├── default.yaml         # Default configuration values
 │   └── deployment_template.yaml  # Template for new sites
-└── data/                    # Runtime data (gitignored)
-    ├── models/              # Edge TPU .tflite model files
-    ├── logs/                # Application logs
-    └── counts/              # SQLite databases
+├── data/                    # Runtime data (gitignored)
+│   ├── models/              # Edge TPU .tflite model files
+│   ├── logs/                # Application logs
+│   └── counts/              # SQLite databases
+│
+│   # Labeling subpackage (inside aoos_fishcount/)
+│   labeling/
+│   ├── app.py               # Flask labeling web app
+│   ├── static/              # JS + CSS for canvas UI
+│   └── templates/           # HTML template
 ```
+
+---
+
+## Labeling Tool
+
+A browser-based annotation tool for creating YOLO training data. Designed for
+non-expert users (e.g., Yup'ik employees who can identify salmon species) to draw
+bounding boxes around fish in images captured by the field camera.
+
+### Installation
+
+```bash
+# Install with labeling dependencies (adds Flask)
+pip install -e ".[labeling]"
+```
+
+### Usage
+
+```bash
+# Point at a folder of images and an output folder for labels
+aoos-label --input data/captures/2026-06-15 --output data/training/2026-06-15
+```
+
+This opens a web UI in your default browser. Draw bounding boxes, select species
+(king, red, silver, chum, pink), and save. Progress is preserved across sessions —
+restarting the tool with the same output directory picks up where you left off.
+
+Output includes YOLO-format `.txt` label files, `classes.txt`, and `dataset.yaml`
+ready for YOLOv8 training. See [docs/software/labeling.md](docs/software/labeling.md)
+for the full user guide, keyboard shortcuts, and instructions for building a
+standalone `.exe` with PyInstaller.
 
 ---
 
@@ -278,8 +315,3 @@ MIT License — see [LICENSE](LICENSE).
 ---
 
 ## Acknowledgments
-
-- **KRITFC** and the Native Village of Napaimute for field collaboration
-- **Dr. Danny Auerbach, Washington State University** — camera-based escapement monitoring
-- **Salmon Computer Vision project** — pre-trained YOLOv8 weights
-- **AOOS / AYK Sustainable Salmon Initiative** — grant funding (#16251)
