@@ -299,6 +299,48 @@ This is the authoritative reference for the hardware side of the project. The so
 this repository implements the pipeline described in the guide's Phase 4 (Software Stack).
 
 ---
+## Connecting the Coral TPU
+The Coral USB Accelerator only supports **Python 3.6–3.9**, so you’ll need to install an older Python version on your system before running the Edge TPU runtime or the PyCoral libraries. The official setup guide is available at **coral.ai/docs**, and it includes a link to the **Pyenv** documentation, which is the recommended way to manage multiple Python versions on the same machine.
+
+### **1. Install Pyenv**
+Pyenv lets you install and switch between different Python versions without affecting your system Python. Follow the installation steps in the Pyenv documentation (linked from the Coral guide), which typically include:
+
+- Installing required build dependencies  
+- Running the Pyenv installer script  
+- Adding Pyenv to your shell (`.bashrc`, `.zshrc`, etc.)  
+- Restarting your terminal so Pyenv loads correctly  
+
+### **2. Install Python 3.9 with Pyenv**
+Once Pyenv is installed:
+
+```bash
+pyenv install 3.9.18
+pyenv global 3.9.18   # or 'pyenv local 3.9.18' inside your project folder
+```
+
+This ensures all Coral TPU libraries will work correctly.
+
+### **3. Create a Virtual Environment for the TPU**
+Using your Pyenv-installed Python:
+
+```bash
+python -m venv coral-env
+source coral-env/bin/activate
+```
+
+This isolates your Coral TPU dependencies from the rest of your system.
+
+### **4. Install the Coral TPU Runtime + PyCoral**
+Inside the virtual environment:
+
+```bash
+pip install --upgrade pip
+pip install pycoral
+```
+
+(If the Coral docs specify a particular runtime package for your OS, install that instead.)
+
+---
 
 ## Contributing
 
