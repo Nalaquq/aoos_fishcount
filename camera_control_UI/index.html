@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPi Camera Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-section {
+            background: #f5f6fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .status-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.active {
+            background-color: #cfe2ff;
+            color: #084298;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.stopped {
+            background-color: #e7d4f5;
+            color: #5a21b5;
+        }
+
+        .status-badge.error {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-stop:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+            margin-left: 4px;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% {
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 20px;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Camera Control</h1>
+            <p>Remote RPi Camera Management</p>
+        </div>
+
+        <div class="status-section">
+            <div class="status-row">
+                <span class="status-label">Camera Status</span>
+                <span class="status-badge" id="statusBadge">Loading</span>
+            </div>
+
+            <div class="status-row">
+                <span class="status-label">Frames Captured</span>
+                <span class="status-value" id="captureCount">0</span>
+            </div>
+
+            <div class="status-row">
+                <span class="status-label">Last Capture</span>
+                <span class="status-value">
+                    <span id="lastCaptureTime">—</span>
+                    <span class="loading" id="loadingDot" style="display: none;"></span>
+                </span>
+            </div>
+
+            <div class="status-row" id="errorRow" style="display: none;">
+                <span class="status-label">Error</span>
+                <span class="status-value" id="errorMessage" style="color: #d32f2f;"></span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-start" id="startBtn" onclick="startCapture()">
+                ▶ Start Capturing
+            </button>
+            <button class="btn-stop" id="stopBtn" onclick="stopCapture()" disabled>
+                ⏹ Stop Capturing
+            </button>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="info-text">
+            <p>✓ Status updates every 2 seconds</p>
+            <p>✓ Images saved locally on RPi</p>
+        </div>
+    </div>
+
+    <script>
+        let statusPollingInterval = null;
+        let isCapturing = false;
+
+        async function updateStatus() {
+            try {
+                const response = await fetch("/api/status");
+                const data = await response.json();
+
+                // Update status badge
+                const badge = document.getElementById("statusBadge");
+                badge.className = "status-badge " + data.status;
+                badge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+                // Update capture count
+                document.getElementById("captureCount").textContent = data.capture_count;
+
+                // Update last capture time
+                const lastCaptureEl = document.getElementById("lastCaptureTime");
+                if (data.last_capture_time) {
+                    const date = new Date(data.last_capture_time);
+                    lastCaptureEl.textContent = date.toLocaleTimeString();
+                } else {
+                    lastCaptureEl.textContent = "—";
+                }
+
+                // Update loading dot visibility
+                const loadingDot = document.getElementById("loadingDot");
+                if (data.capturing) {
+                    loadingDot.style.display = "inline-block";
+                } else {
+                    loadingDot.style.display = "none";
+                }
+
+                // Update error display
+                const errorRow = document.getElementById("errorRow");
+                if (data.error_message) {
+                    errorRow.style.display = "flex";
+                    document.getElementById("errorMessage").textContent = data.error_message;
+                } else {
+                    errorRow.style.display = "none";
+                }
+
+                // Update button states
+                isCapturing = data.capturing;
+                document.getElementById("startBtn").disabled = isCapturing;
+                document.getElementById("stopBtn").disabled = !isCapturing;
+            } catch (error) {
+                console.error("Error fetching status:", error);
+                showMessage("Failed to update status", "error");
+            }
+        }
+
+        async function startCapture() {
+            try {
+                const response = await fetch("/api/start", { method: "POST" });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage("Capture started!", "success");
+                    document.getElementById("startBtn").disabled = true;
+                    document.getElementById("stopBtn").disabled = false;
+                    updateStatus();
+                } else {
+                    showMessage(data.message, "error");
+                }
+            } catch (error) {
+                console.error("Error starting capture:", error);
+                showMessage("Failed to start capture", "error");
+            }
+        }
+
+        async function stopCapture() {
+            try {
+                const response = await fetch("/api/stop", { method: "POST" });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage("Capture stopped!", "success");
+                    document.getElementById("startBtn").disabled = false;
+                    document.getElementById("stopBtn").disabled = true;
+                    updateStatus();
+                } else {
+                    showMessage(data.message, "error");
+                }
+            } catch (error) {
+                console.error("Error stopping capture:", error);
+                showMessage("Failed to stop capture", "error");
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById("message");
+            messageEl.textContent = text;
+            messageEl.className = "message show " + type;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageEl.classList.remove("show");
+            }, 5000);
+        }
+
+        // Initialize on page load
+        document.addEventListener("DOMContentLoaded", () => {
+            updateStatus();
+            // Poll status every 2 seconds
+            statusPollingInterval = setInterval(updateStatus, 2000);
+        });
+
+        // Clean up on page unload
+        window.addEventListener("beforeunload", () => {
+            if (statusPollingInterval) {
+                clearInterval(statusPollingInterval);
+            }
+        });
+    </script>
+</body>
+</html>
