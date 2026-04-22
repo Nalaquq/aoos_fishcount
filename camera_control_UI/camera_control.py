@@ -19,7 +19,7 @@ from flask import Flask, jsonify, render_template
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aoos_fishcount.sensors.camera import CameraCapture
+from aoos_fishcount.sensors.picamera2_capture import Picamera2Capture
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +65,7 @@ def initialize_camera(config: dict | None = None) -> bool:
         if config:
             camera_config.update(config)
 
-        camera = CameraCapture(**camera_config)
+        camera = Picamera2Capture(**camera_config)
         log.info("Camera initialized successfully")
         return True
     except Exception as e:
